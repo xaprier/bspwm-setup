@@ -412,7 +412,6 @@ class RiceEditorApp(Gtk.Window):
                 self.wall_engine_combo.append("Random", "Random")
                 self.wall_engine_combo.append("CustomDir", "Custom Dir")
                 self.wall_engine_combo.append("Default", "Default")
-                self.wall_engine_combo.append("Animated", "Custom Animated")
                 self.wall_engine_combo.append("Slideshow", "SlideShow")
 
                 # Set initial value
@@ -1517,33 +1516,6 @@ class RiceEditorApp(Gtk.Window):
             self.wall_engine_options_box.pack_start(custom_image_label, False, False, 10)
             self.wall_engine_options_box.pack_start(hbox, False, False, 10)
 
-        elif engine == "Animated":  # Custom Image
-            # Label for Custom Animated
-            custom_animated_label = Gtk.Label(
-                label="Select the file you want to use as wallpaper.\nValid files (mp4, mkv, gif)"
-            )
-            custom_animated_label.set_halign(Gtk.Align.START)
-            custom_animated_label.set_justify(Gtk.Justification.LEFT)
-
-            # Entry and Buttons
-            custom_animated_entry = Gtk.Entry()
-            custom_animated_entry.set_text(self.get_custom_animated())
-
-            browse_button = Gtk.Button(label="Browse")
-            browse_button.connect("clicked", self.on_browse_animated, custom_animated_entry)
-
-            apply_button = Gtk.Button(label="Apply")
-            apply_button.connect("clicked", self.on_apply_wall_engine, "Animated", custom_animated_entry)
-
-            # Layout
-            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            hbox.pack_start(custom_animated_entry, True, True, 0)
-            hbox.pack_end(browse_button, False, False, 0)
-            hbox.pack_end(apply_button, False, False, 0)
-
-            self.wall_engine_options_box.pack_start(custom_animated_label, False, False, 10)
-            self.wall_engine_options_box.pack_start(hbox, False, False, 10)
-
         elif engine == "Slideshow":  # Slideshow 15 minutes
             current_theme = self.get_current_theme()
             slideshow_label = Gtk.Label(
@@ -1573,9 +1545,6 @@ class RiceEditorApp(Gtk.Window):
 
     def get_custom_wall(self):
         return self.read_theme_variable("DEFAULT_WALL")
-
-    def get_custom_animated(self):
-        return self.read_theme_variable("ANIMATED_WALL")
 
     def read_theme_variable(self, var_name):
         current_theme = self.get_current_theme()
@@ -1612,9 +1581,6 @@ class RiceEditorApp(Gtk.Window):
                 if engine == "Default" and line.startswith('DEFAULT_WALL='):
                     content[i] = f'DEFAULT_WALL="{entry.get_text()}"\n'
 
-                if engine == "Animated" and line.startswith('ANIMATED_WALL='):
-                    content[i] = f'ANIMATED_WALL="{entry.get_text()}"\n'
-
             with open(config_file, 'w') as f:
                 f.writelines(content)
 
@@ -1645,14 +1611,6 @@ class RiceEditorApp(Gtk.Window):
                 rm -f /tmp/wall_refresh.pid;
                 feh --bg-fill "{entry.get_text()}";
                 WallSync &
-                '''
-            elif engine == "Animated":
-                command = f'''
-                pkill xwinwrap;
-                [ -f /tmp/wall_refresh.pid ] && kill $(cat /tmp/wall_refresh.pid) 2>/dev/null;
-                rm -f /tmp/wall_refresh.pid;
-                AnimatedWall --start "{entry.get_text()}";
-                WallSync --animated &
                 '''
             elif engine == "Slideshow":
                 command = f'''
@@ -1721,38 +1679,6 @@ class RiceEditorApp(Gtk.Window):
         filter_images.add_pattern("*.jpg")
         filter_images.add_pattern("*.jpeg")
         filter_images.add_pattern("*.webp")
-        dialog.add_filter(filter_images)
-
-        response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            file = dialog.get_filename()
-            entry.set_text(file)
-
-        dialog.destroy()
-
-    def on_browse_animated(self, button, entry):
-        """
-        Abre un diálogo para seleccionar un archivo y actualiza la entrada.
-        """
-        dialog = Gtk.FileChooserDialog(
-            title="Select Image File",
-            parent=self,
-            action=Gtk.FileChooserAction.OPEN,
-        )
-        dialog.add_buttons(
-            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-            Gtk.STOCK_OPEN, Gtk.ResponseType.OK
-        )
-
-        # Filtro para imágenes
-        filter_images = Gtk.FileFilter()
-        filter_images.set_name("Animated Files")
-        filter_images.add_mime_type("image/gif")
-        filter_images.add_mime_type("video/mp4")
-        filter_images.add_mime_type("video/mkv")
-        filter_images.add_pattern("*.gif")
-        filter_images.add_pattern("*.mp4")
-        filter_images.add_pattern("*.mkv")
         dialog.add_filter(filter_images)
 
         response = dialog.run()

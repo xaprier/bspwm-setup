@@ -29,7 +29,7 @@ accent_color="#222330"
 arch_icon="#0f94d2"
 
 # Bspwm options
-BORDER_WIDTH="0"		# Bspwm border
+BORDER_WIDTH="2"		# Bspwm border
 TOP_PADDING="50"
 BOTTOM_PADDING="1"
 LEFT_PADDING="1"
@@ -38,12 +38,12 @@ NORMAL_BC="#414868"		# Normal border color
 FOCUSED_BC="#bb9af7"	# Focused border color
 
 # Terminal font & size
-term_font_size="10"
+term_font_size="14"
 term_font_name="JetBrainsMono Nerd Font"
 
 # Picom options
 P_FADE="true"			# Fade true|false
-P_SHADOWS="true"		# Shadows true|false
+P_SHADOWS="false"		# Shadows true|false
 SHADOW_C="#000000"		# Shadow color
 P_CORNER_R="6"			# Corner radius (0 = disabled)
 P_BLUR="false"			# Blur true|false
@@ -103,7 +103,7 @@ geany_theme="z0mbi3-TokyoNight"
 # - Default (Sets a specific image as wallpaper) *Default
 # - Animated (Set an animated wallpaper. "mp4, mkv, gif")
 # - Slideshow (Change randomly every 15 minutes your wallpaper from Walls rice directory)
-ENGINE="Default"
+ENGINE="Slideshow"
 
 CUSTOM_DIR="/path/to/your/wallpapers/directory"
 DEFAULT_WALL="$HOME/.config/bspwm/rices/emilia/walls/wall-01.webp"

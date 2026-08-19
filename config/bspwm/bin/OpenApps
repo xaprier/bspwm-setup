@@ -29,9 +29,6 @@ case "$1" in
 	--netmanager)
 		NetManagerDM
 		;;
-	--pass)
-		RofiPass
-		;;
 	--bluetooth)
 		rofi-bluetooth
 		;;
@@ -44,42 +41,17 @@ case "$1" in
 	--powermenu)
 		PowerMenu
 		;;
-	--android)
-		AndroidMount
+	--filemanager)
+			thunar
 		;;
-	--keyboard)
-		KeyBoardL
+	--browser)
+			zen-browser
 		;;
-	--yazi)
-		Term --yazi
-		;;
-	--nvim)
-		Term --nvim
-		;;
-	--music)
-		Term --music
-		;;
-	--fetch)
-		Term --fetch
-		;;
-	--scratch)
-		Bspwm-ScratchPad
-		;;
-		# Apps
-    --filemanager)
-        ${FILEMANAGER:-thunar}
-        ;;
-    --browser)
-        ${BROWSER:-firefox}
-        ;;
-    --editor)
-        ${EDITOR:-geany}
+	--editor)
+			zeditor
 		;;
 	--telegram)
 		telegram-desktop
-		;;
-	--whats)
-		firefox -new-tab https://web.whatsapp.com/
 		;;
 	--soundcontrol)
 		pavucontrol
@@ -93,6 +65,9 @@ case "$1" in
 		;;
 	--player)
 		eww -c "$WIDGET_DIR" open --toggle music
+		;;
+	--config)
+		code ~/.config/bspwm
 		;;
 	*)
 		echo "Invalid Option"

@@ -19,10 +19,6 @@ set_wall() {
         "Default")
             set_wall "$DEFAULT_WALL"
             ;;
-        "Animated")
-            AnimatedWall --start "$ANIMATED_WALL"
-            WallSync --animated &
-            ;;
         "Slideshow")
             (
                 while :; do

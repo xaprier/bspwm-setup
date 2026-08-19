@@ -21,7 +21,7 @@ super + {_,alt + }Return
     OpenApps --{terminal,floating}
 
 # App launcher
-super + @space
+super + d
     OpenApps --menu
 
 # Theme Selector
@@ -30,35 +30,17 @@ alt + @space
 
 # ----- Your Apps ----- #
 
-# Apps (browser, editor, filemanager)
-super + {b,e,f}
-    OpenApps --{browser,editor,filemanager}
-
-# Terminal apps (yazi, nvim, ncmpcpp)
-super + {y,v,m}
-    OpenApps --{yazi,nvim,music}
-
-# Media apps (Pavucontrol, Telegram, Whatsapp)
-super + {p,t,w}
-    OpenApps --{soundcontrol,telegram,whats}
+# Apps (browser, editor, filemanager, config, pavucontrol, terminal)
+super + {F1,F2,F3,F4,s,enter}
+    OpenApps --{browser,filemanager,editor,config,soundcontrol,terminal}
 
 # Rice Editor App
 super + r
     RiceEditor
 
-# ----- Rofi Applets ----- #
-
-#Terminal Selector
-super + alt + t
-    Term --selecterm
-
 # Wallpaper selector
-super + alt + w
+super + w
     WallSelect
-
-# Mount Android phones
-super + alt + a
-    OpenApps --android
 
 # Network Manager
 super + alt + n
@@ -69,34 +51,22 @@ super + alt + b
     OpenApps --bluetooth
 
 # Clipboard
-super + alt + c
+super + v
     OpenApps --clipboard
 
 # Screenshot
-super + alt + s
+alt + s
     OpenApps --screenshot
 
 # PowerMenu
-super + alt + p
+super + p
     OpenApps --powermenu
 
 # Rofi style
 super + alt + l
     RofiLauncher --choose-style
 
-# Keyboard Layout Applet
-super + alt + k
-    OpenApps --keyboard
-
-# RofiPass applet
-super + alt + x
-    OpenApps --pass
-
 # ----- Environment Apps ----- #
-
-# Scratchpad
-super + alt + o
-    OpenApps --scratch
 
 # jgmenu
 ~button3
@@ -107,7 +77,7 @@ super + alt + o
 
 # Power off, Reboot, Log out, Lockscreen, kill an app
 ctrl + super + alt + {p,r,q,l,k,s}
-    {systemctl poweroff, systemctl reboot,bspc quit,ScreenLocker,xkill,SoftReload}
+    {systemctl poweroff, systemctl reboot,bspc quit,ScreenLocker,xkill}
 
 # Hide/Show Bar (Polybar and/or eww)
 super + alt + {h,u}
@@ -134,11 +104,14 @@ XF86Audio{Next,Prev,Play,Stop}
 #####################
 
 # Reload BSPWM
-super + alt + r
+super + shift + r
     bspc wm -r
 
+super + alt + r
+    SoftReload
+
 # Close/Kill node
-super + {_,shift + }x
+super + q
     bspc node -{c,k}
 
 # Reload sxhkd Keybinds
@@ -147,20 +120,21 @@ super + Escape
 
 # ----- Node states and flags ----- #
 
-# Set the node state
-alt + {t,shift + t,a,f}
-    bspc node -t {tiled,pseudo_tiled,floating,fullscreen}
+super + t
+    bspc query -N -n focused.pseudo_tiled && bspc node -t floating || bspc node -t pseudo_tiled
 
-# Set the node flags
-alt + {m,x,s,p}
-    bspc node -g {marked,locked,sticky,private}
+super + shift + f
+    bspc query -N -n focused.fullscreen && bspc node -t tiled || bspc node -t fullscreen
+
+super + @space
+    bspc query -N -n focused.floating && bspc node -t tiled || bspc node -t floating
 
 # Hide window
-alt + h
+super + h
     HideNode --hide
 
 # Show menu to restore hidden windows
-ctrl + alt + h
+alt + h
     HideNode --menu
 
 # ----- Focus/Swap Nodes ----- #
@@ -170,7 +144,7 @@ ctrl + Tab
     bspc node @/ --rotate {90,-90}
 
 # Switch workspace
-super + {Left,Right}
+super + alt + {Left,Right}
     bspc desktop -f {prev,next}
 
 # Focus or send to the given desktop
@@ -190,28 +164,11 @@ alt + Tab
         -kb-accept-entry "!Alt-Tab,Return" \
         -kb-element-next "Alt-Tab"
 
-# Focus the node in the given direction
-super + alt + {Left,Down,Up,Right}
-    { DIR=west FALLBACK=prev; , DIR=south; , DIR=north; , DIR=east FALLBACK=next; } \
-    bspc node -f $DIR.!sticky.!hidden.local || bspc node -f $FALLBACK.leaf.!sticky.!hidden.local
-
 # Swap Nodes
-ctrl + alt + {Left,Down,Up,Right}
-    bspc node -s {west,south,north,east}.local
-
-# Focus the last node/desktop
-ctrl + shift {comma,period}
-    bspc {node,desktop} -f last
-
-# Preselect the direction (horizontal, vertical or cancel)
-super + ctrl {h,v,q}
-    bspc node -p {east,south,cancel}
+super + shift + {Left,Down,Up,Right}
+    bspc node -s {west,south,north,east}
 
 # ----- Move/Resize Nodes ----- #
-
-# balance desktop's nodes
-super + ctrl + b
-  bspc node @/ -B
 
 # increase/decrease Node
 super + alt + {plus,minus}
@@ -230,6 +187,10 @@ super + ctrl + {plus,minus}
 # Move floating window
 super + shift + {Left,Down,Up,Right}
     bspc node -v {-20 0,0 20,0 -20,20 0}
+
+# move and focus the node to the given desktop
+super + {_,shift + }{1-9,0}
+    bspc {desktop -f, node -d} '^{1-9,10}' --follow
 
 # ----- Multi operation functions ----- #
 

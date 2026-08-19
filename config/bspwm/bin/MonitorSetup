@@ -21,11 +21,6 @@
 # xrandr cmd
 XRANDR_OUTPUT=$(xrandr)
 
-# Remove disconnected monitors (reuse the cached xrandr output)
-echo "$XRANDR_OUTPUT" | while read -r mon state _; do
-    [ "$state" = "disconnected" ] && xrandr --output "$mon" --off
-done
-
 # Function to obtain monitor info (POSIX-compliant)
 get_monitor_info() {
     echo "$XRANDR_OUTPUT" | awk -v monitor="$1" '
@@ -33,22 +28,7 @@ get_monitor_info() {
     ' | tr -d '*+'
 }
 
-# If the user already has a primary output configured (nvidia-settings,
-# xorg.conf, or a manual `xrandr --output X --primary`), respect it and
-# put it first in the list, instead of always using the first output
-# xrandr happens to enumerate.
-PRIMARY_MON=$(echo "$XRANDR_OUTPUT" | awk '$2 == "connected" && $3 == "primary" { print $1; exit }')
-
-# Get connected monitors
-set -- $(echo "$XRANDR_OUTPUT" | awk '$2 == "connected" {print $1}')
-
-if [ -n "$PRIMARY_MON" ]; then
-    rest=""
-    for mon in "$@"; do
-        [ "$mon" != "$PRIMARY_MON" ] && rest="$rest $mon"
-    done
-    set -- "$PRIMARY_MON" $rest
-fi
+set -- $(echo "$XRANDR_OUTPUT" | grep -E ' connected' | awk '{print $1}')
 
 NUM_MONITORS=$#
 
@@ -72,26 +52,7 @@ case $NUM_MONITORS in
         monitor_1="$1"
         monitor_2="$2"
 
-        set -- $(get_monitor_info "$monitor_1")
-        mode_1="$1"
-        rate_1="$2"
-
-        set -- $(get_monitor_info "$monitor_2")
-        mode_2="$1"
-        rate_2="$2"
-
-        xrandr --output "$monitor_1" --primary --mode "$mode_1" --pos 0x0 --auto --rate "$rate_1" \
-               --output "$monitor_2" --mode "$mode_2" --right-of "$monitor_1" --auto --rate "$rate_2"
-
-        bspc monitor "$monitor_1" -d 1 2 3 4
-        bspc monitor "$monitor_2" -d 5 6 7 8
-        bspc wm -O "$monitor_1" "$monitor_2"
-        ;;
-
-    3)
-        monitor_1="$1"
-        monitor_2="$2"
-        monitor_3="$3"
+        echo "Detected monitors: $monitor_1, $monitor_2"
 
         set -- $(get_monitor_info "$monitor_1")
         mode_1="$1"
@@ -101,52 +62,36 @@ case $NUM_MONITORS in
         mode_2="$1"
         rate_2="$2"
 
-        set -- $(get_monitor_info "$monitor_3")
-        mode_3="$1"
-        rate_3="$2"
+        # set the HDMI-* one as primary and the other one to the left of it with correct workspaces
+        case "$monitor_1" in
+            HDMI-*)
+                primary_monitor="$monitor_1"
+                secondary_monitor="$monitor_2"
+                primary_mode="$mode_1"
+                secondary_mode="$mode_2"
+                primary_rate="$rate_1"
+                secondary_rate="$rate_2"
+                ;;
+            *)
+                primary_monitor="$monitor_2"
+                secondary_monitor="$monitor_1"
+                primary_mode="$mode_2"
+                secondary_mode="$mode_1"
+                primary_rate="$rate_2"
+                secondary_rate="$rate_1"
+                ;;
+        esac
 
-        xrandr --output "$monitor_1" --primary --mode "$mode_1" --pos 0x0 --auto --rate "$rate_1" \
-               --output "$monitor_2" --mode "$mode_2" --left-of "$monitor_1" --auto --rate "$rate_2" \
-               --output "$monitor_3" --mode "$mode_3" --right-of "$monitor_1" --auto --rate "$rate_3"
+        echo "Setting $primary_monitor as primary and $secondary_monitor to the left of it"
+        echo "Primary monitor: $primary_monitor ($primary_mode @ $primary_rate Hz)"
+        echo "Secondary monitor: $secondary_monitor ($secondary_mode @ $secondary_rate Hz)"
 
-        bspc monitor "$monitor_1" -d 1 2 3
-        bspc monitor "$monitor_2" -d 4 5 6
-        bspc monitor "$monitor_3" -d 7 8 9
-        bspc wm -O "$monitor_1" "$monitor_2" "$monitor_3"
-        ;;
+        xrandr --output "$primary_monitor" --primary --mode "$primary_mode" --pos 0x0 --auto --rate "$primary_rate" \
+               --output "$secondary_monitor" --mode "$secondary_mode" --left-of "$primary_monitor" --auto --rate "$secondary_rate"
 
-    4)
-        monitor_1="$1"
-        monitor_2="$2"
-        monitor_3="$3"
-        monitor_4="$4"
-
-        set -- $(get_monitor_info "$monitor_1")
-        mode_1="$1"
-        rate_1="$2"
-
-        set -- $(get_monitor_info "$monitor_2")
-        mode_2="$1"
-        rate_2="$2"
-
-        set -- $(get_monitor_info "$monitor_3")
-        mode_3="$1"
-        rate_3="$2"
-
-        set -- $(get_monitor_info "$monitor_4")
-        mode_4="$1"
-        rate_4="$2"
-
-        xrandr --output "$monitor_1" --primary --mode "$mode_1" --pos 0x0 --auto --rate "$rate_1" \
-               --output "$monitor_2" --mode "$mode_2" --left-of "$monitor_1" --auto --rate "$rate_2" \
-               --output "$monitor_3" --mode "$mode_3" --right-of "$monitor_1" --auto --rate "$rate_3" \
-               --output "$monitor_4" --mode "$mode_4" --above "$monitor_1" --auto --rate "$rate_4"
-
-        bspc monitor "$monitor_1" -d 1 2 3
-        bspc monitor "$monitor_2" -d 4 5
-        bspc monitor "$monitor_3" -d 6 7
-        bspc monitor "$monitor_4" -d 8 9
-        bspc wm -O "$monitor_1" "$monitor_2" "$monitor_3" "$monitor_4"
+        bspc monitor "$secondary_monitor" -d 5 6 7 8
+        bspc monitor "$primary_monitor" -d 1 2 3 4
+        bspc wm -O "$primary_monitor" "$secondary_monitor"
         ;;
 
     *)

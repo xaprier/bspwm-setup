@@ -31,9 +31,7 @@ MonitorSetup
 #  ╠╩╗╚═╗╠═╝║║║║║║  ║  ║ ║║║║╠╣ ║║ ╦
 #  ╚═╝╚═╝╩  ╚╩╝╩ ╩  ╚═╝╚═╝╝╚╝╚  ╩╚═╝
 
-bspc config external_rules_command "${HOME}"/.config/bspwm/bin/ExternalRules
-
-bspc config window_gap                5
+bspc config window_gap                10
 bspc config split_ratio               0.51
 bspc config single_monocle            true
 
@@ -42,7 +40,7 @@ bspc config initial_polarity          second_child
 bspc config removal_adjustment        true
 
 bspc config focus_follows_pointer     true
-bspc config pointer_follows_focus     false
+bspc config pointer_follows_focus     true
 bspc config pointer_follows_monitor   true
 bspc config pointer_motion_interval   7
 bspc config pointer_modifier          mod4
@@ -84,5 +82,5 @@ run clipcatd
 # Launch polkit
 run lxpolkit
 
-# Start one time message
-[ ! -f "$HOME/.config/bspwm/config/.first_run_done" ] && eww -c ${HOME}/.config/bspwm/eww open --toggle welcome && touch "$HOME/.config/bspwm/config/.first_run_done"
+# Launch encrypted disk mount script
+run "${HOME}"/.local/bin/mount-veracrypt.sh
