@@ -168,6 +168,10 @@ alt + Tab
 super + shift + {Left,Down,Up,Right}
     bspc node -s {west,south,north,east}
 
+# Focus Nodes
+super + {Left,Down,Up,Right}
+    bspc node -f {west,south,north,east}
+
 # ----- Move/Resize Nodes ----- #
 
 # increase/decrease Node
