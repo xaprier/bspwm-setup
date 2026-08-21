@@ -1,0 +1,177 @@
+// # Media Controller
+// # Created by xaprier - https://github.com/xaprier/bspwm-setup
+
+configuration {
+    hover-select: false;
+    me-select-entry:  "";
+    me-accept-entry:  "MousePrimary";
+    show-icons:       false;
+}
+
+@import "shared.rasi"
+
+/*****----- Main Window -----*****/
+window {
+    transparency:     "real";
+    location:         center;
+    anchor:           center;
+    fullscreen:       false;
+    width:            620px;
+    x-offset:         0px;
+    y-offset:         0px;
+    margin:           0px;
+    padding:          0px;
+    border:           2px solid;
+    border-radius:    15px;
+    border-color:     @selected;
+    cursor:           "default";
+    background-color: @background;
+}
+
+/*****----- Main Box -----*****/
+mainbox {
+    enabled:          true;
+    orientation:      vertical;
+    spacing:          20px;
+    margin:           0px;
+    padding:          24px;
+    background-color: transparent;
+    children: [
+        "media-box",
+        "listview"
+    ];
+}
+
+/*****----- Artwork + Track Info -----*****/
+media-box {
+    enabled:          true;
+    orientation:      horizontal;
+    spacing:          20px;
+    padding:          0px;
+    background-color: transparent;
+    children: [
+        "imagebox",
+        "info-box"
+    ];
+}
+
+/* Cover art. Box widget - background-image draws reliably here, unlike on
+   a textbox. Size comes from padding; rofi ignores width/height.
+   The script collapses this widget when no artUrl is available. */
+imagebox {
+    enabled:          true;
+    expand:           false;
+    padding:          60px;
+    border-radius:    10px;
+    background-color: @background-alt;
+}
+
+/* Three stacked rows, each expanding so they spread across the art height */
+info-box {
+    enabled:          true;
+    orientation:      vertical;
+    spacing:          10px;
+    padding:          0px;
+    background-color: transparent;
+    children: [
+        "textbox-title",
+        "textbox-artist",
+        "textbox-progress"
+    ];
+}
+
+/*****----- Row 1 : Title -----*****/
+textbox-title {
+    enabled:          true;
+    expand:           true;
+    padding:          0px;
+    background-color: transparent;
+    text-color:       @foreground;
+    font:             "JetBrainsMono Nerd Font Bold 13";
+    horizontal-align: 0.5;
+    vertical-align:   0.5;
+}
+
+/*****----- Row 2 : Artist -----*****/
+textbox-artist {
+    enabled:          true;
+    expand:           true;
+    padding:          0px;
+    background-color: transparent;
+    text-color:       @selected;
+    font:             "JetBrainsMono Nerd Font 11";
+    horizontal-align: 0.5;
+    vertical-align:   0.5;
+}
+
+/*****----- Row 3 : Progress -----*****/
+textbox-progress {
+    enabled:          true;
+    expand:           false;
+    padding:          10px 12px;
+    border-radius:    8px;
+    background-color: @background-alt;
+    text-color:       @active;
+    font:             "JetBrainsMono Nerd Font 10";
+    horizontal-align: 0.5;
+    vertical-align:   0.5;
+}
+
+/*****----- Shared Textbox Defaults -----*****/
+textbox {
+    background-color: inherit;
+    text-color:       inherit;
+    vertical-align:   0.5;
+    horizontal-align: 0.5;
+}
+
+/*****----- Controls -----*****/
+listview {
+    enabled:          true;
+    columns:          3;
+    lines:            1;
+    cycle:            true;
+    dynamic:          false;
+    scrollbar:        false;
+    layout:           vertical;
+    reverse:          false;
+    fixed-height:     true;
+    fixed-columns:    true;
+    spacing:          12px;
+    margin:           0px;
+    padding:          0px;
+    border:           0px;
+    background-color: transparent;
+    text-color:       @foreground;
+    cursor:           "default";
+}
+
+element {
+    enabled:          true;
+    padding:          12px 0px;
+    margin:           0px;
+    border:           1px solid;
+    border-radius:    8px;
+    border-color:     @background-alt;
+    background-color: @background;
+    text-color:       @foreground;
+    cursor:           pointer;
+}
+
+element-text {
+    enabled:          true;
+    expand:           true;
+    padding:          0px;
+    font:             "JetBrainsMono Nerd Font 20";
+    background-color: transparent;
+    text-color:       inherit;
+    cursor:           inherit;
+    vertical-align:   0.5;
+    horizontal-align: 0.5;
+}
+
+element selected.normal {
+    background-color: @selected;
+    border-color:     @selected;
+    text-color:       @background;
+}
