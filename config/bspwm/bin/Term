@@ -77,7 +77,7 @@ case $MY_TERM in
 	    "--checkupdates") alacritty -o window.opacity=0.93 --class Updating,Updating -e Updates --print-updates ;;
 	    "--yazi") alacritty --class FloaTerm,YaziTerm -e yazi ;;
 	    "--nvim") alacritty -e nvim ;;
-	    "--music") alacritty --class FloaTerm,MusicTerm -e ncmpcpp ;;
+	    "--cava") alacritty --class FloaTerm,MusicTerm -e cava ;;
 	    "--fetch") alacritty --class FloaTerm,FetchTerm -e ~/.local/bin/sysfetch ;;
 	esac
 	;;
@@ -88,7 +88,7 @@ case $MY_TERM in
 	    "--checkupdates") st -A 0.93 -c Updating -e Updates --print-updates ;;
 	    "--yazi") st -n YaziTerm -c FloaTerm -e yazi ;;
 	    "--nvim") st -e nvim ;;
-	    "--music") st -n MusicTerm -c FloaTerm -e ncmpcpp ;;
+	    "--cava") st -n MusicTerm -c FloaTerm -e cava ;;
 	    "--fetch") st -n FetchTerm -c FloaTerm -e ~/.local/bin/sysfetch ;;
 	esac
 	;;
@@ -99,7 +99,7 @@ case $MY_TERM in
 	    "--checkupdates") kitty -o background_opacity=0.93 --class=Updating -e Updates --print-updates ;;
 	    "--yazi") kitty --name=YaziTerm --class=FloaTerm -e yazi ;;
 	    "--nvim") kitty -e nvim ;;
-	    "--music") kitty --name=MusicTerm --class=FloaTerm -e ncmpcpp ;;
+	    "--cava") kitty --name=MusicTerm --class=FloaTerm -e cava ;;
 	    "--fetch") kitty --name=FetchTerm --class=FloaTerm -e ~/.local/bin/sysfetch ;;
 	esac
 	;;
@@ -110,7 +110,7 @@ case $MY_TERM in
 	    "--checkupdates") ghostty --x11-instance-name=Updating --background-opacity=0.93 --title=Updating -e Updates --print-updates ;;
 	    "--yazi") ghostty --x11-instance-name=YaziTerm --title=YaziTerm -e yazi ;;
 	    "--nvim") ghostty -e nvim ;;
-	    "--music") ghostty --x11-instance-name=MusicTerm --title=MusicTerm -e ncmpcpp ;;
+	    "--cava") ghostty --x11-instance-name=MusicTerm --title=MusicTerm -e cava ;;
 	    "--fetch") ghostty --x11-instance-name=FetchTerm --title=FetchTerm -e ~/.local/bin/sysfetch ;;
 	esac
 	;;

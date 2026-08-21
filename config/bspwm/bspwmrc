@@ -31,6 +31,8 @@ MonitorSetup
 #  ╠╩╗╚═╗╠═╝║║║║║║  ║  ║ ║║║║╠╣ ║║ ╦
 #  ╚═╝╚═╝╩  ╚╩╝╩ ╩  ╚═╝╚═╝╝╚╝╚  ╩╚═╝
 
+bspc config external_rules_command "${HOME}"/.config/bspwm/bin/ExternalRules
+
 bspc config window_gap                10
 bspc config split_ratio               0.51
 bspc config single_monocle            true

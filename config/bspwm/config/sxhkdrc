@@ -10,6 +10,12 @@
 alt + F1
     OpenApps --KeyHelp
 
+button4
+    pkill -USR2 -x sxhkd
+
+button5
+    pkill -USR1 -x sxhkd
+
 ############################
 # ----- Applications ----- #
 ############################
@@ -197,7 +203,6 @@ super + {_,shift + }{1-9,0}
     bspc {desktop -f, node -d} '^{1-9,10}' --follow
 
 # ----- Multi operation functions ----- #
-
 # Close all nodes in current desktop
 super + ctrl + x
     bspc query -N -d | xargs -I id -n 1 bspc node id -c
