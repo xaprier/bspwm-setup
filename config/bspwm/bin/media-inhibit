@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+set -u
+
+INHIBIT_PID=""
+STATE=""
+
+start_inhibit() {
+    [[ "$STATE" == "playing" ]] && return
+
+    STATE="playing"
+
+    xset -dpms
+
+    systemd-inhibit \
+        --what=idle:sleep \
+        --who="media-inhibit" \
+        --why="Media is playing" \
+        sleep infinity &
+
+    INHIBIT_PID=$!
+}
+
+stop_inhibit() {
+    [[ "$STATE" == "stopped" ]] && return
+
+    STATE="stopped"
+
+    xset +dpms
+
+    if [[ -n "$INHIBIT_PID" ]]; then
+        kill "$INHIBIT_PID" 2>/dev/null || true
+        INHIBIT_PID=""
+    fi
+}
+
+cleanup() {
+    xset +dpms
+
+    if [[ -n "$INHIBIT_PID" ]]; then
+        kill "$INHIBIT_PID" 2>/dev/null || true
+    fi
+}
+
+trap cleanup EXIT INT TERM
+
+update_state() {
+    local playing=false
+
+    while IFS= read -r status; do
+        if [[ "$status" == "Playing" ]]; then
+            playing=true
+            break
+        fi
+    done < <(playerctl -a status 2>/dev/null || true)
+
+    if [[ "$playing" == true ]]; then
+        start_inhibit
+    else
+        stop_inhibit
+    fi
+}
+
+update_state
+
+playerctl -a status --follow 2>/dev/null |
+while IFS= read -r _; do
+    update_state
+done

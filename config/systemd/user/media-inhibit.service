@@ -1,0 +1,11 @@
+[Unit]
+Description=Inhibit idle and sleep while media is playing
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.config/bspwm/bin/media-inhibit
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

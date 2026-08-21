@@ -43,3 +43,8 @@ multiplier = 3
 animation = "Linear"
 duration = 0
 command = { program = "paplay", args = ["/usr/share/sounds/freedesktop/stereo/dialog-error.oga"] }
+
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift"
+chars = "\u001B\r"
