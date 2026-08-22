@@ -166,6 +166,18 @@ class RiceEditorApp(Gtk.Window):
 
                 content.pack_start(focused_border_color_box, False, False, 7)
 
+                # Reload the sxhkd configuration button and the bspwm configuration button
+                reload_buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=7)
+                reload_sxhkd_button = Gtk.Button(label="Reload sxhkd")
+                reload_sxhkd_button.connect("clicked", self.on_reload_sxhkd)
+                reload_bspwm_button = Gtk.Button(label="Reload bspwm")
+                reload_bspwm_button.connect("clicked", self.on_reload_bspwm)
+
+                reload_buttons_box.pack_start(reload_sxhkd_button, True, True, 0)
+                reload_buttons_box.pack_end(reload_bspwm_button, True, True, 0)
+
+                content.pack_end(reload_buttons_box, False, False, 7)
+
             # Dentro del método __init__, en la sección del notebook, donde está el tab de Picom
             elif tab_name == "Picom":
                 # Corner Radius Configuration
@@ -588,6 +600,28 @@ class RiceEditorApp(Gtk.Window):
 
         # Conexión de señales
         self.connect("destroy", Gtk.main_quit)
+
+    def on_reload_sxhkd(self, button):
+        """
+        Reload the sxhkd configuration by sending a USR1 signal to the sxhkd process.
+        """
+        try:
+            subprocess.run(['pkill', '-USR1', 'sxhkd'], check=True)
+            subprocess.run(['dunstify', '-u', 'low', 'sxhkd', 'The configuration file has been reloaded successfully!'], check=True)
+            print("sxhkd reloaded successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Error when reloading sxhkd: {e}")
+
+    def on_reload_bspwm(self, button):
+        """
+        Reload the bspwm configuration by restarting the bspwm process.
+        """
+        try:
+            subprocess.run(['bspc', 'wm', '--restart'], check=True)
+            subprocess.run(['dunstify', '-u', 'low', 'bspwm', 'The configuration file has been restarted successfully!'], check=True)
+            print("bspwm restarted")
+        except subprocess.CalledProcessError as e:
+            print(f"Error when restarting bspwm: {e}")
 
     def on_menu_clicked(self, button, page_name):
         self.content_stack.set_visible_child_name(page_name)

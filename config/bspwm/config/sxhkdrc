@@ -10,12 +10,6 @@
 alt + F1
     OpenApps --KeyHelp
 
-button4
-    pkill -USR2 -x sxhkd
-
-button5
-    pkill -USR1 -x sxhkd
-
 ############################
 # ----- Applications ----- #
 ############################
