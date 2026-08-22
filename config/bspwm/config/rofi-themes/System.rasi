@@ -1,0 +1,162 @@
+// # System Menu
+// # Created by xaprier - https://github.com/xaprier/bspwm-setup
+// # Layout based on z0mbi3's rofi themes
+
+configuration {
+    show-icons:                  false;
+    kb-cancel:                   "Escape,MousePrimary,MouseSecondary";
+}
+
+@import "shared.rasi"
+
+/*****----- Main Window -----*****/
+window {
+    transparency:                "real";
+    location:                    center;
+    anchor:                      center;
+    fullscreen:                  false;
+    width:                       540px;
+    x-offset:                    0;
+    y-offset:                    0;
+
+    enabled:                     true;
+    margin:                      0px;
+    padding:                     0px;
+    border:                      2px solid;
+    border-radius:               12px;
+    border-color:                @selected;
+    cursor:                      "default";
+    background-color:            @background;
+}
+
+/*****----- Main Box -----*****/
+mainbox {
+    enabled:                     true;
+    spacing:                     12px;
+    margin:                      0px;
+    padding:                     16px;
+    border:                      0px solid;
+    background-color:            transparent;
+    children:                    [ "inputbar", "message", "listview" ];
+}
+
+/*****----- Header -----*****/
+inputbar {
+    enabled:                     true;
+    spacing:                     10px;
+    margin:                      0px;
+    padding:                     0px;
+    border:                      0px solid;
+    background-color:            transparent;
+    text-color:                  @foreground;
+    children:                    [ "textbox-prompt-colon", "prompt", "entry" ];
+}
+
+textbox-prompt-colon {
+    enabled:                     true;
+    expand:                      false;
+    str:                         "";
+    padding:                     8px 12px;
+    border-radius:               8px;
+    background-color:            @active;
+    text-color:                  @background;
+}
+
+prompt {
+    enabled:                     true;
+    expand:                      false;
+    padding:                     8px 12px;
+    border-radius:               8px;
+    background-color:            @selected;
+    text-color:                  @background;
+}
+
+entry {
+    enabled:                     true;
+    expand:                      true;
+    padding:                     8px 12px;
+    border-radius:               8px;
+    background-color:            @background-alt;
+    text-color:                  inherit;
+    cursor:                      text;
+    placeholder:                 "Filter";
+    placeholder-color:           inherit;
+}
+
+/*****----- Status Line -----*****/
+message {
+    enabled:                     true;
+    margin:                      0px;
+    padding:                     8px 12px;
+    border:                      0px solid;
+    border-radius:               8px;
+    background-color:            @background-alt;
+    text-color:                  @foreground;
+}
+
+textbox {
+    background-color:            transparent;
+    text-color:                  inherit;
+    vertical-align:              0.5;
+    horizontal-align:            0.5;
+    highlight:                   none;
+    markup:                      true;
+}
+
+/*****----- Entries -----*****/
+listview {
+    enabled:                     true;
+    columns:                     1;
+    lines:                       9;
+    cycle:                       true;
+    dynamic:                     true;
+    scrollbar:                   false;
+    layout:                      vertical;
+    reverse:                     false;
+    fixed-height:                false;
+    fixed-columns:               true;
+
+    spacing:                     4px;
+    margin:                      0px;
+    padding:                     0px;
+    border:                      0px solid;
+    background-color:            transparent;
+    text-color:                  @foreground;
+    cursor:                      "default";
+}
+
+element {
+    enabled:                     true;
+    spacing:                     0px;
+    margin:                      0px;
+    padding:                     9px 12px;
+    border:                      0px solid;
+    border-radius:               8px;
+    background-color:            transparent;
+    text-color:                  @foreground;
+    cursor:                      pointer;
+}
+
+element normal.normal {
+    background-color:            transparent;
+    text-color:                  @foreground;
+}
+
+element selected.normal {
+    background-color:            @selected;
+    text-color:                  @background;
+}
+
+element alternate.normal {
+    background-color:            transparent;
+    text-color:                  @foreground;
+}
+
+element-text {
+    background-color:            transparent;
+    text-color:                  inherit;
+    highlight:                   inherit;
+    cursor:                      inherit;
+    vertical-align:              0.5;
+    horizontal-align:            0.0;
+}

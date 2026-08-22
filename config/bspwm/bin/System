@@ -1,0 +1,361 @@
+#!/usr/bin/env bash
+
+# ─────────────────────────────────────────────
+# Configuration
+# ─────────────────────────────────────────────
+
+bspwm_dir="$HOME/.config/bspwm"
+rasi_file="$bspwm_dir/config/rofi-themes/System.rasi"
+shared_rasi="$bspwm_dir/config/rofi-themes/shared.rasi"
+
+softreload_script="$bspwm_dir/bin/SoftReload"
+
+# Absolute path to this script, so the terminal sub-shell can call back
+# into it for notifications instead of duplicating the notifier logic.
+self="$(readlink -f "${BASH_SOURCE[0]}")"
+
+# ─────────────────────────────────────────────
+# Icons
+# ─────────────────────────────────────────────
+
+# Material Design Icons range of a Nerd Font. Swap any that render as
+# tofu for a glyph you know exists in your installed font.
+icon_update=$'\U000F06B0'
+icon_mirror=$'\U000F01E7'
+icon_cache=$'\U000F0A79'
+icon_orphan=$'\U000F01B4'
+icon_memory=$'\U000F035B'
+icon_wm=$'\U000F0453'
+icon_soft=$'\U000F0450'
+icon_keys=$'\U000F030C'
+icon_compositor=$'\U000F0379'
+# Pull the accent color straight from the rofi palette so notifications
+# follow the theme without a second source of truth.
+accent="$(sed -n 's/^[[:space:]]*selected:[[:space:]]*\(#[0-9a-fA-F]\{3,8\}\).*/\1/p' \
+    "$shared_rasi" | head -n1)"
+
+accent="${accent:-#d79921}"
+
+
+# ─────────────────────────────────────────────
+# Notification Icon
+# ─────────────────────────────────────────────
+
+notify_icon_template="$bspwm_dir/config/assets/system.svg"
+notify_icon="/tmp/system-icon-${accent#\#}.svg"
+
+# Recolors every literal fill in the SVG to the theme accent. Icons pulled
+# from icon sites ship with a hardcoded fill (usually black), which is
+# invisible against a dark notification background. Keying the cache file
+# on the color means a theme switch produces a new path, which sidesteps
+# the notification daemon's icon cache.
+if [[ ! -f "$notify_icon" ]]; then
+    sed "s/fill=\"#[0-9a-fA-F]\{3,8\}\"/fill=\"$accent\"/g" \
+        "$notify_icon_template" > "$notify_icon" 2>/dev/null ||
+        notify_icon="$notify_icon_template"
+fi
+
+# ─────────────────────────────────────────────
+# Notifications
+# ─────────────────────────────────────────────
+
+# Urgency is a real signal here, not decoration: normal for things that
+# succeeded, critical for anything the user has to act on. dunstifier is
+# preferred, notify-send is the fallback on a plain setup.
+notify() {
+    local summary="$1"
+    local body="${2:-}"
+    local urgency="${3:-low}"
+
+    if command -v dunstifier >/dev/null 2>&1; then
+        dunstifier -u "$urgency" -i "$notify_icon" "System" "$summary" "$body"
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -a "System" -u "$urgency" -i "$notify_icon" "$summary" "$body"
+    fi
+}
+
+# Re-entry point used by run_in_terminal: System --notify <urgency> <summary> <body>
+if [[ "${1:-}" == "--notify" ]]; then
+    notify "${3:-}" "${4:-}" "${2:-low}"
+    exit 0
+fi
+
+# ─────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────
+
+# Pick the AUR helper if one is installed, otherwise fall back to pacman.
+# Only the helper name is resolved here; sudo is handled per command.
+pick_helper() {
+    local helper
+    for helper in paru yay; do
+        command -v "$helper" >/dev/null 2>&1 && { printf '%s' "$helper"; return; }
+    done
+    printf 'pacman'
+}
+
+helper="$(pick_helper)"
+
+# Terminal choice lives in the Term script, which reads config/.term —
+# resolving a terminal here would duplicate that state.
+term_script="$bspwm_dir/bin/Term"
+
+if [[ ! -x "$term_script" ]]; then
+    term_script="$(command -v Term 2>/dev/null)"
+fi
+
+# Long-running or password-prompting commands need a visible terminal.
+# The shell is kept alive afterwards so output can be read, and the exit
+# status is reported through a notification — the terminal may well be on
+# another desktop by the time the job finishes.
+run_in_terminal() {
+    local window_title="$1"
+    local command_line="$2"
+    local success_text="${3:-Completed successfully}"
+
+    if [[ -z "$term_script" ]]; then
+        notify "Term script not found" "Expected at $bspwm_dir/bin/Term" critical
+        return 1
+    fi
+
+    local wrapped
+    wrapped="$command_line"$'\n'
+    wrapped+='status=$?'$'\n'
+    wrapped+='if [ "$status" -eq 0 ]; then'$'\n'
+    wrapped+="    \"$self\" --notify normal \"$window_title\" \"$success_text\""$'\n'
+    wrapped+='else'$'\n'
+    wrapped+="    \"$self\" --notify critical \"$window_title\" \"Failed with exit status \$status\""$'\n'
+    wrapped+='fi'$'\n'
+    wrapped+='printf "\n[ Press enter to close ]"'$'\n'
+    wrapped+='read -r'
+
+    "$term_script" --exec "$wrapped" "$window_title" &
+    disown
+}
+
+# ─────────────────────────────────────────────
+# Confirmation Prompt
+# ─────────────────────────────────────────────
+
+# Reuses the same theme, shrunk to two rows and with filtering disabled.
+confirm() {
+    local question="$1"
+    local answer
+
+    answer="$(printf '%s\n' "Yes" "No" |
+        rofi \
+            -dmenu \
+            -i \
+            -format i \
+            -selected-row 1 \
+            -p "$question" \
+            -theme "$rasi_file" \
+            -theme-str 'listview { lines: 2; }' \
+            -theme-str 'entry { enabled: false; }')"
+
+    [[ "$answer" == "0" ]]
+}
+
+# ─────────────────────────────────────────────
+# Package Actions
+# ─────────────────────────────────────────────
+
+action_update() {
+    if [[ "$helper" == "pacman" ]]; then
+        run_in_terminal "Update" \
+            "sudo pacman -Syu" \
+            "Repository packages are up to date"
+    else
+        run_in_terminal "Update" \
+            "$helper -Syu" \
+            "Repository and AUR packages are up to date"
+    fi
+}
+
+action_mirrors() {
+    if ! command -v reflector >/dev/null 2>&1; then
+        notify "reflector is not installed" "Install it with: pacman -S reflector" critical
+        return
+    fi
+
+    run_in_terminal "Mirrors" \
+        "sudo reflector --latest 20 --sort rate --protocol https --save /etc/pacman.d/mirrorlist && sudo pacman -Syy" \
+        "Mirrorlist rebuilt and databases synced"
+}
+
+action_cache() {
+    confirm "Clean package cache?" || return
+
+    if command -v paccache >/dev/null 2>&1; then
+        # Keep the most recent version of each installed package, drop the
+        # rest, and purge every version of uninstalled ones.
+        run_in_terminal "Cache" \
+            "sudo paccache -rk1 && sudo paccache -ruk0" \
+            "Old package versions removed"
+    else
+        run_in_terminal "Cache" \
+            "sudo pacman -Sc" \
+            "Package cache cleaned"
+    fi
+}
+
+action_orphans() {
+    confirm "Remove orphaned packages?" || return
+
+    run_in_terminal "Orphans" \
+        "orphans=\$(pacman -Qtdq) && [ -n \"\$orphans\" ] && sudo pacman -Rns \$orphans || echo 'No orphans found.'" \
+        "Orphan check finished"
+}
+
+action_memory() {
+    # sync first so nothing dirty is lost, then drop page/inode/dentry caches.
+    # Available memory is sampled either side so the result is visible.
+    run_in_terminal "Memory" \
+        "before=\$(free -m | awk '/Mem:/ {print \$7}') && sync && echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null && after=\$(free -m | awk '/Mem:/ {print \$7}') && printf 'Available before: %sM\nAvailable after:  %sM\n' \"\$before\" \"\$after\"" \
+        "Page, inode and dentry caches dropped"
+}
+
+# ─────────────────────────────────────────────
+# Session Actions
+# ─────────────────────────────────────────────
+
+action_bspwm_restart() {
+    # Notify before the call: bspc wm -r replaces the running instance and
+    # anything queued after it may never execute.
+    notify "Restarting bspwm" "Reloading the window manager" normal
+    bspc wm -r
+}
+
+action_bspwm_softreload() {
+    if [[ ! -x "$softreload_script" ]]; then
+        notify "softreload not found" "Expected at $softreload_script" critical
+        return
+    fi
+
+    if "$softreload_script"; then
+        notify "bspwm soft reloaded" "Configuration reapplied without a restart" normal
+    else
+        notify "Soft reload failed" "$softreload_script returned an error" critical
+    fi
+}
+
+action_sxhkd() {
+    # SIGUSR1 makes sxhkd reload its config without dropping the process,
+    # so running keybind chains are not interrupted.
+    if pkill -USR1 -x sxhkd; then
+        notify "sxhkd reloaded" "Keybindings reread from sxhkdrc" normal
+    else
+        notify "sxhkd is not running" "No process to signal" critical
+    fi
+}
+
+action_compositor() {
+    if ! command -v picom >/dev/null 2>&1; then
+        notify "picom is not installed" "Install it with: pacman -S picom" critical
+        return
+    fi
+
+    pkill -x picom
+    sleep 0.5
+    setsid picom --config "$bspwm_dir/config/picom/picom.conf" >/dev/null 2>&1 &
+    disown
+
+    # Give it a moment to either come up or die on a bad config.
+    sleep 1
+
+    if pgrep -x picom >/dev/null 2>&1; then
+        notify "picom restarted" "Compositor is running" normal
+    else
+        notify "picom failed to start" "Check config/picom/picom.conf" critical
+    fi
+}
+
+# ─────────────────────────────────────────────
+# Menu
+# ─────────────────────────────────────────────
+
+menu_labels=(
+    "$icon_update  Update System"
+    "$icon_mirror  Refresh Mirrors"
+    "$icon_cache  Clean Package Cache"
+    "$icon_orphan  Remove Orphans"
+    "$icon_memory  Drop Memory Caches"
+    "$icon_soft  Soft Reload bspwm"
+    "$icon_wm  Restart bspwm"
+    "$icon_keys  Reload sxhkd"
+    "$icon_compositor  Restart picom"
+)
+
+menu_actions=(
+    action_update
+    action_mirrors
+    action_cache
+    action_orphans
+    action_memory
+    action_bspwm_softreload
+    action_bspwm_restart
+    action_sxhkd
+    action_compositor
+)
+
+# ─────────────────────────────────────────────
+# Status Line
+# ─────────────────────────────────────────────
+
+updates_cache="/tmp/system-updates-count"
+
+kernel="$(uname -r)"
+uptime_text="$(uptime -p 2>/dev/null | sed 's/^up //')"
+
+status_message="$kernel  ·  ${uptime_text:-unknown}"
+
+# Both checkupdates and `-Qua` hit the network — checkupdates syncs a
+# temporary database, the AUR query calls the RPC endpoint. Neither can run
+# inline without stalling the menu, so the last cached counts are shown and
+# refreshed in the background for the next launch.
+if command -v checkupdates >/dev/null 2>&1 || [[ "$helper" != "pacman" ]]; then
+
+    if [[ -f "$updates_cache" ]]; then
+        read -r repo_updates aur_updates < "$updates_cache"
+    fi
+
+    status_message+="  ·  ${repo_updates:-?} repo"
+
+    [[ "$helper" != "pacman" ]] &&
+        status_message+="/${aur_updates:-?} aur"
+
+    {
+        repo_count=0
+        aur_count=0
+
+        command -v checkupdates >/dev/null 2>&1 &&
+            repo_count="$(checkupdates 2>/dev/null | wc -l)"
+
+        [[ "$helper" != "pacman" ]] &&
+            aur_count="$("$helper" -Qua 2>/dev/null | wc -l)"
+
+        printf '%s %s\n' "$repo_count" "$aur_count" > "$updates_cache"
+    } >/dev/null 2>&1 &
+
+    disown
+
+fi
+
+# ─────────────────────────────────────────────
+# Run
+# ─────────────────────────────────────────────
+
+# -format i returns the row index, which stays valid regardless of how the
+# list was filtered — matching on label text would break under filtering.
+chosen="$(printf '%s\n' "${menu_labels[@]}" |
+    rofi \
+        -dmenu \
+        -i \
+        -format i \
+        -p "System" \
+        -mesg "$status_message" \
+        -theme "$rasi_file")"
+
+[[ -z "$chosen" ]] && exit 0
+
+"${menu_actions[$chosen]}"
