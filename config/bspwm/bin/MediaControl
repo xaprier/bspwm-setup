@@ -1,166 +1,402 @@
-#!/bin/sh
-# =============================================================
-# Author: gh0stzk
-# Repo:   https://github.com/gh0stzk/dotfiles
-# Date:   24.04.2025
-# Info:   This script uses playerctl and mpc to control the multimedia playback
-#         "stop, pause, play, next, previous" of different players like
-#         spotify, ncmpcpp, clementine, strawberry and others.
-# =============================================================
+#!/usr/bin/env bash
+# Created by xaprier
 
-# Set the player
-[ -n "$(pgrep spotify)" ] && Control="spotify" || Control="MPD"
+# ─────────────────────────────────────────────
+# Configuration
+# ─────────────────────────────────────────────
 
-# Here the cover image will be saved.
-Cover=/tmp/cover.png
-# if cover not found in metadata use this instead
-bkpCover=~/.config/bspwm/config/assets/fallback.webp
-# mpd music directory for mpd clients.
-mpddir=~/Music
-LAST_SONG_FILE="/tmp/last_song.txt"
+# Leave empty to auto-select the first running player.
+# Set to a bus name (e.g. "firefox", "mpd") to pin one.
+preferred_player=""
 
-case $Control in
-    MPD)
-        case $1 in
-            --next)
-                mpc -q next
-                ;;
-            --previous)
-                mpc -q prev
-                ;;
-            --toggle)
-                mpc -q toggle
-                ;;
-            --stop)
-                mpc -q stop
-                ;;
-            --title)
-                title=$(mpc -f %title% current)
-                echo "${title:-Play Something}"
-                ;;
-            --artist)
-                artist=$(mpc -f %artist% current)
-                echo "${artist:-No Artist}"
-                ;;
-            --status)
-                status=$(mpc status | sed -En '2s/.*\[([^]]*)\].*/\u\1/p')
-                echo "${status:-Stopped}"
-                ;;
-            --player)
-                echo "$Control"
-                ;;
-            --cover)
-                current_song=$(mpc current -f "%title%-%artist%")
-				last_song=""
-				[ -f "$LAST_SONG_FILE" ] && last_song=$(cat "$LAST_SONG_FILE")
+fallback_cover="$HOME/.config/bspwm/config/assets/fallback.png"
 
-				if [ "$current_song" != "$last_song" ] || [ ! -f "$Cover" ]; then
-					ffmpeg -i "$mpddir/$(mpc current -f %file%)" "$Cover" -y > /dev/null 2>&1 || cp "$bkpCover" "$Cover"
-					echo "$current_song" > "$LAST_SONG_FILE"
-				fi
+cache_file="/tmp/media-meta-cache"
+cover_cache_dir="/tmp/media-covers"
 
-				echo "$Cover"
-                ;;
-            nccover)
-                ffmpeg -i "$mpddir/$(mpc current -f %file%)" "$Cover" -y > /dev/null 2>&1 || cp "$bkpCover" "$Cover"
-                ;;
-            --position)
-                position=$(mpc status %currenttime%)
-                echo "${position:-0:00}"
-                ;;
-            --positions)
-                positions=$(mpc status %currenttime% | awk -F: '{print ($1 * 60) + $2}')
-                echo "${positions:-0}"
-                ;;
-            --length)
-                length=$(mpc status %totaltime%)
-                echo "${length:-0:00}"
-                ;;
-            --lengths)
-                lengths=$(mpc status %totaltime% | awk -F: '{print ($1 * 60) + $2}')
-                echo "${lengths:-0}"
-                ;;
-            --shuffle)
-                shuffle=$(mpc status | sed -n '3s/.*random: \([^ ]*\).*/\1/p' | sed 's/.*/\u&/')
-                echo "${shuffle:-Off}"
-                ;;
-            --loop)
-                loop=$(mpc status | sed -n '3s/.*repeat: \([^ ]*\).*/\1/p' | sed 's/.*/\u&/')
-                echo "${loop:-Off}"
-                ;;
-        esac
+# Fixed id so repeated notifications replace each other
+# instead of stacking up.
+notify_id=91190
+notify_timeout=4000
+
+# ─────────────────────────────────────────────
+# Player Resolution
+# ─────────────────────────────────────────────
+
+# Resolve once and reuse: separate playerctl invocations may otherwise
+# pick different players when more than one is running.
+resolve_player() {
+    local running candidate
+
+    running="$(playerctl -l 2>/dev/null)"
+
+    [[ -z "$running" ]] && return 1
+
+    if [[ -n "$preferred_player" ]]; then
+        while IFS= read -r candidate; do
+            [[ "$candidate" == "$preferred_player"* ]] && {
+                printf '%s' "$candidate"
+                return 0
+            }
+        done <<< "$running"
+    fi
+
+    head -n1 <<< "$running"
+}
+
+player="$(resolve_player)"
+
+# ─────────────────────────────────────────────
+# Metadata
+# ─────────────────────────────────────────────
+
+status=""
+title=""
+artist=""
+length=""
+position=""
+art_url=""
+
+# Read every field in one D-Bus round trip so the values are guaranteed
+# to describe the same track. Fields are separated by 0x1f (unit
+# separator), which never appears in metadata strings.
+read_meta() {
+    playerctl -p "$player" metadata --format \
+        $'{{status}}\x1f{{xesam:title}}\x1f{{xesam:artist}}\x1f{{mpris:length}}\x1f{{position}}\x1f{{mpris:artUrl}}' \
+        2>/dev/null
+}
+
+# Firefox omits mpris:length and mpris:artUrl from most PropertiesChanged
+# payloads, emitting a complete dict only on seek or state change. Values
+# that survive a full read are cached and keyed by title, so a single good
+# read serves every later call for that track.
+load_metadata() {
+    local retry="${1:-}"
+    local cached_title="" cached_length="" cached_art=""
+
+    [[ -z "$player" ]] && return 1
+
+    IFS=$'\x1f' read -r status title artist length position art_url \
+        <<< "$(read_meta)"
+
+    if [[ "$retry" == "--retry" ]]; then
+        for _ in 1 2 3; do
+            [[ -n "${length//[^0-9]/}" && -n "$art_url" ]] && break
+            sleep 0.15
+            IFS=$'\x1f' read -r status title artist length position art_url \
+                <<< "$(read_meta)"
+        done
+    fi
+
+    length="${length//[^0-9]/}"
+    position="${position//[^0-9]/}"
+
+    if [[ -f "$cache_file" ]]; then
+        IFS=$'\x1f' read -r cached_title cached_length cached_art < "$cache_file"
+    fi
+
+    if [[ -n "$length" ]] && (( length > 0 )); then
+        printf '%s\x1f%s\x1f%s' "$title" "$length" "$art_url" > "$cache_file"
+    elif [[ "$cached_title" == "$title" ]]; then
+        length="$cached_length"
+    fi
+
+    # artUrl drops out of partial dicts independently of length,
+    # so it is restored separately.
+    if [[ -z "$art_url" && "$cached_title" == "$title" ]]; then
+        art_url="$cached_art"
+    fi
+
+    return 0
+}
+
+# ─────────────────────────────────────────────
+# Cover Art
+# ─────────────────────────────────────────────
+
+# Firefox hands over a file:// URI pointing at a PNG it already wrote to
+# disk, so nothing needs downloading. Remote URIs (Spotify and friends)
+# are fetched once and cached by URL hash.
+resolve_cover() {
+    local url="$1"
+    local path hash
+
+    if [[ "$url" == file://* ]]; then
+        path="${url#file://}"
+        path="$(printf '%b' "${path//%/\\x}")"
+
+        # The URI is published slightly before the file lands on disk,
+        # so give it a moment rather than falling back immediately.
+        for _ in 1 2 3; do
+            [[ -s "$path" ]] && break
+            sleep 0.1
+        done
+
+        if [[ -s "$path" ]]; then
+            printf '%s' "$path"
+            return 0
+        fi
+
+    elif [[ "$url" == http://* || "$url" == https://* ]]; then
+        mkdir -p "$cover_cache_dir"
+
+        hash="$(printf '%s' "$url" | md5sum | cut -d' ' -f1)"
+        path="$cover_cache_dir/$hash"
+
+        if [[ ! -s "$path" ]]; then
+            curl -sfL --max-time 5 "$url" --output "$path" || rm -f "$path"
+        fi
+
+        if [[ -s "$path" ]]; then
+            printf '%s' "$path"
+            return 0
+        fi
+    fi
+
+    printf '%s' "$fallback_cover"
+}
+
+# ─────────────────────────────────────────────
+# Notification
+# ─────────────────────────────────────────────
+
+# dunst parses the body as Pango markup, so an ampersand or angle bracket
+# in a track name would otherwise swallow the rest of the line.
+escape_pango() {
+    local value="$1"
+
+    value="${value//&/&amp;}"
+    value="${value//</&lt;}"
+    value="${value//>/&gt;}"
+
+    printf '%s' "$value"
+}
+
+# Single entry point for every notification. The state argument is
+# optional: track changes pass nothing, playback actions pass a label.
+notify_media() {
+    local state="${1:-}"
+    local cover body
+
+    command -v dunstify >/dev/null 2>&1 || return
+
+    cover="$(resolve_cover "$art_url")"
+    body="$(escape_pango "${artist:-Unknown Artist}")"
+
+    [[ -n "$state" ]] && body="$state · $body"
+
+    dunstify \
+        -a "Media" \
+        -u low \
+        -r "$notify_id" \
+        -t "$notify_timeout" \
+        -i "$cover" \
+        "$(escape_pango "${title:-Unknown Title}")" \
+        "$body"
+}
+
+# ─────────────────────────────────────────────
+# State Polling
+# ─────────────────────────────────────────────
+
+# playerctl returns as soon as the D-Bus call is accepted, well before the
+# player publishes the new track. Poll until the identity changes rather
+# than sleeping a fixed amount, so the notification shows the new song and
+# not the one that was just skipped.
+wait_for_track_change() {
+    local before="$1"
+
+    for _ in {1..15}; do
+        sleep 0.1
+        load_metadata
+
+        [[ -n "$title" && "$title|$artist" != "$before" ]] && return 0
+    done
+
+    return 1
+}
+
+# Same reason as the track poll, applied to the status property.
+wait_for_status_change() {
+    local before="$1"
+
+    for _ in {1..10}; do
+        sleep 0.05
+        load_metadata
+
+        [[ -n "$status" && "$status" != "$before" ]] && return 0
+    done
+
+    return 1
+}
+
+change_track() {
+    local direction="$1"
+    local before
+
+    [[ -z "$player" ]] && return
+
+    load_metadata
+    before="$title|$artist"
+
+    playerctl -p "$player" "$direction" || return
+
+    wait_for_track_change "$before"
+
+    # Pull a complete dict for the new track before notifying:
+    # artUrl in particular is rarely present in the first payload.
+    load_metadata --retry
+
+    notify_media
+}
+
+# ─────────────────────────────────────────────
+# Formatting Helpers
+# ─────────────────────────────────────────────
+
+format_duration() {
+    local microseconds="${1:-0}"
+    local total minutes seconds
+
+    total=$(( microseconds / 1000000 ))
+    minutes=$(( total / 60 ))
+    seconds=$(( total % 60 ))
+
+    printf '%d:%02d' "$minutes" "$seconds"
+}
+
+# ─────────────────────────────────────────────
+# Dispatch
+# ─────────────────────────────────────────────
+
+case "$1" in
+
+    --next)
+        change_track next
         ;;
+
+    --previous)
+        change_track previous
+        ;;
+
+    --toggle)
+        [[ -z "$player" ]] && exit 0
+
+        # Read without retry first: the keypress should not wait on
+        # metadata before the audio actually reacts.
+        load_metadata
+        before_status="$status"
+
+        playerctl -p "$player" play-pause || exit 1
+
+        wait_for_status_change "$before_status"
+        load_metadata --retry
+
+        notify_media "${status:-Stopped}"
+        ;;
+
+    --play)
+        [[ -z "$player" ]] && exit 0
+
+        load_metadata
+        playerctl -p "$player" play || exit 1
+
+        wait_for_status_change "$status"
+        load_metadata --retry
+
+        notify_media "Playing"
+        ;;
+
+    --pause)
+        [[ -z "$player" ]] && exit 0
+
+        load_metadata
+        playerctl -p "$player" pause || exit 1
+
+        wait_for_status_change "$status"
+        load_metadata --retry
+
+        notify_media "Paused"
+        ;;
+
+    --stop)
+        [[ -z "$player" ]] && exit 0
+
+        # Read before stopping: the player often drops off the bus
+        # afterwards, taking its metadata with it.
+        load_metadata --retry
+
+        playerctl -p "$player" stop || exit 1
+
+        notify_media "Stopped"
+        ;;
+
+    --title)
+        load_metadata
+        echo "${title:-Play Something}"
+        ;;
+
+    --artist)
+        load_metadata
+        echo "${artist:-No Artist}"
+        ;;
+
+    --status)
+        load_metadata
+        echo "${status:-Stopped}"
+        ;;
+
+    --player)
+        echo "${player:-None}"
+        ;;
+
+    --cover)
+        load_metadata --retry
+        resolve_cover "$art_url"
+        echo
+        ;;
+
+    --notify)
+        load_metadata --retry
+        notify_media
+        ;;
+
+    --position)
+        load_metadata
+        format_duration "${position:-0}"
+        ;;
+
+    --positions)
+        load_metadata
+        echo $(( ${position:-0} / 1000000 ))
+        ;;
+
+    --length)
+        load_metadata --retry
+        format_duration "${length:-0}"
+        ;;
+
+    --lengths)
+        load_metadata --retry
+        echo $(( ${length:-0} / 1000000 ))
+        ;;
+
+    --shuffle)
+        [[ -z "$player" ]] && { echo "Off"; exit 0; }
+        playerctl -p "$player" shuffle 2>/dev/null || echo "Off"
+        ;;
+
+    --loop)
+        [[ -z "$player" ]] && { echo "None"; exit 0; }
+        playerctl -p "$player" loop 2>/dev/null || echo "None"
+        ;;
+
     *)
-        case $1 in
-            --next)
-                playerctl --player="$Control" next
-                ;;
-            --previous)
-                playerctl --player="$Control" previous
-                ;;
-            --toggle)
-                playerctl --player="$Control" play-pause
-                ;;
-            --stop)
-                playerctl --player="$Control" stop
-                ;;
-            --title)
-                title=$(playerctl --player="$Control" metadata --format "{{title}}")
-                echo "${title:-Play Something}"
-                ;;
-            --artist)
-                artist=$(playerctl --player="$Control" metadata --format "{{artist}}")
-                echo "${artist:-No Artist}"
-                ;;
-            --status)
-                status=$(playerctl --player="$Control" status)
-                echo "${status:-Stopped}"
-                ;;
-            --player)
-                echo "$Control"
-                ;;
-            --cover)
-                current_song="$(playerctl --player="$Control" metadata --format '{{title}}-{{artist}}')"
-				last_song=""
-				[ -f "$LAST_SONG_FILE" ] && last_song=$(cat "$LAST_SONG_FILE")
+        echo "usage: ${0##*/} --next|--previous|--toggle|--play|--pause|--stop|--notify" >&2
+        echo "       ${0##*/} --title|--artist|--status|--player|--cover" >&2
+        echo "       ${0##*/} --position|--positions|--length|--lengths" >&2
+        echo "       ${0##*/} --shuffle|--loop" >&2
+        exit 1
+        ;;
 
-				if [ "$current_song" != "$last_song" ] || [ ! -f "$Cover" ]; then
-					albumart="$(playerctl --player="$Control" metadata mpris:artUrl | sed -e 's/open.spotify.com/i.scdn.co/g')"
-					art_url=$(playerctl --player="$Control" metadata mpris:artUrl)
-                    if [ -n "$art_url" ]; then
-                        albumart=$(echo "$art_url" | sed -e 's/open.spotify.com/i.scdn.co/g')
-                        curl -s "$albumart" --output "$Cover"
-                    else
-                        cp "$bkpCover" "$Cover"
-                    fi
-				echo "$current_song" > "$LAST_SONG_FILE"
-				fi
-
-				echo "$Cover"
-                ;;
-            --position)
-                position=$(playerctl --player="$Control" position --format "{{ duration(position) }}")
-                echo "${position:-0:00}"
-                ;;
-            --positions)
-                positions=$(playerctl --player="$Control" position | sed 's/..\{6\}$//')
-                echo "${positions:-0}"
-                ;;
-            --length)
-                length=$(playerctl --player="$Control" metadata --format "{{ duration(mpris:length) }}")
-                echo "${length:-0:00}"
-                ;;
-            --lengths)
-                lengths=$(playerctl --player="$Control" metadata mpris:length | sed 's/.\{6\}$//')
-                echo "${lengths:-0}"
-                ;;
-            --shuffle)
-                shuffle=$(playerctl --player="$Control" shuffle)
-                echo "${shuffle:-Off}"
-                ;;
-            --loop)
-                loop=$(playerctl --player="$Control" loop)
-                echo "${loop:-None}"
-                ;;
-        esac
-esac 2>/dev/null
+esac
