@@ -8,7 +8,6 @@
 #           and sync updates module in polybar/Eww.
 # Features:
 #   ✔ Shows the number of updates available in polybar/eww
-#   ✔ Used in a pacman hook to update the polybar-module/eww-poll. --sync-polybar
 #
 # Dependencies:
 #   → pacman-contrib, paru, polybar
@@ -18,19 +17,6 @@
 # =============================================================
 
 UPDATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/Updates.txt"
-
-# Sync bars when needed.
-sync_bars() {
-    local current_rice
-
-    # Sends the signal to polybar-module/eww-poll to update the data.
-    if pgrep -x polybar >/dev/null; then
-        polybar-msg action updates hook 0 >/dev/null 2>&1
-    else
-        read -r current_rice < "$HOME/.config/bspwm/.rice"
-        eww -c "$HOME/.config/bspwm/rices/${current_rice}/bar" poll UPDATES
-    fi
-}
 
 # Single source of truth for counting
 get_updates() {
@@ -60,7 +46,6 @@ get_updates() {
 # Persist the last successful result (count) and sync bars
 persist_results() {
     printf '%s\n' "$total" > "$UPDATE_FILE"
-    sync_bars
 }
 
 # Main verification function

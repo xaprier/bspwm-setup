@@ -16,9 +16,6 @@
 (defpoll WIFIICON :interval "15s" `scripts/Network --icon`)
 (defpoll NETSTAT :interval "15s" `scripts/Network --stat`)
 
-;; Updates vars
-(defpoll UPDATES :interval "15m" `cat $HOME/.cache/Updates.txt 2>/dev/null`)
-
 ;; Battery vars
 (defpoll battery_status :interval "10s" "scripts/battery battery_status")
 (defpoll battery_icon :run-while battery_status :interval "15s" "scripts/battery icon")
@@ -102,28 +99,6 @@
 				:tooltip "Widgets"))))
 
 
-
-;; Pacman Widgets ;;
-(defwidget pacman []
-	(eventbox	:onhover "${EWW_CMD} update pac=true"
-				:onhoverlost "${EWW_CMD} update pac=false"
-	(box		:orientation "v"
-				:space-evenly "false"
-				:vexpand "false"
-
-	(revealer	:transition "slideup"
-				:reveal pac
-				:duration "550ms"
-	(box		:orientation "v"
-				:space-evenly "false"
-
-	(label  	:class "bar-updates-text"
-				:text "${UPDATES}")))
-
-	(eventbox   :cursor "pointer"
-	(button		:style "background-image: url('images/pac_man.png');"
-				:class "trayicon"
-				:onclick "OpenApps --checkupdates")))))
 
 
 ;; Volume Widgets ;;

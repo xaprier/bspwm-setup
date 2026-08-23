@@ -10,10 +10,6 @@
 (defpoll hostname :interval "24h" "cat /etc/hostname")
 (defpoll uptime :interval "30s" "uptime -p | sed -E -e 's/hour(s)?/hrs/g' -e 's/minute(s)?/min/g'")
 
-;; Pacman
-(defpoll UPDATES :interval "15m" `cat $HOME/.cache/Updates.txt 2>/dev/null`)
-(defpoll packages :interval "1h" "pacman -Q | wc -l")
-
 ;; Weather
 (defpoll weathericon :interval "15m" "Weather icon")
 (defpoll weathercity :interval "15m" "Weather city")
@@ -114,21 +110,6 @@
 )
 
 (defwidget infoarch []
-          (box :orientation "h"
-	           :space-evenly "false"
-	           :spacing 7
-	           (box :orientation "v"
-					:class "pacman"
-					:hexpand true
-					(label :halign "start"
-						   :class "pacman-icon"
-						   :text "󰮯")
-					(box :space-evenly "false"
-						 (eventbox :cursor "pointer"
-						 (button :class "pacman-updates"
-								 :halign "start"
-								 :tooltip "Click to update"
-								 :onclick "OpenApps --update" "${UPDATES} Updates"))))
 			   (box :orientation "h"
 					:space-evenly "false"
 					:class "fetch"

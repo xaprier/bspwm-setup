@@ -427,13 +427,6 @@ install_dotfiles() {
         cp -R "$HOME/.local/share/gh0stzk/home/$dots_home" "$HOME/"
     done
 
-    # Copying polybar-update.hook
-    if [ ! -d /etc/pacman.d/hooks ]; then
-        sudo mkdir -p /etc/pacman.d/hooks
-    fi
-
-    sudo cp "$HOME/.local/share/gh0stzk/misc/polybar-update.hook" /etc/pacman.d/hooks
-
     # Update font cache
     fc-cache -r
 

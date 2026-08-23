@@ -74,7 +74,6 @@ case $MY_TERM in
 	case $1 in
 	    "--terminal") alacritty ;;
 	    "--floating") alacritty --class FloaTerm,FloaTerm ;;
-	    "--checkupdates") alacritty -o window.opacity=0.93 --class Updating,Updating -e Updates --print-updates ;;
 	    "--yazi") alacritty --class FloaTerm,YaziTerm -e yazi ;;
 	    "--nvim") alacritty -e nvim ;;
 	    "--cava") alacritty --class FloaTerm,MusicTerm -e cava ;;
@@ -86,7 +85,6 @@ case $MY_TERM in
 	case $1 in
 	    "--terminal") st ;;
 	    "--floating") st -c FloaTerm ;;
-	    "--checkupdates") st -A 0.93 -c Updating -e Updates --print-updates ;;
 	    "--yazi") st -n YaziTerm -c FloaTerm -e yazi ;;
 	    "--nvim") st -e nvim ;;
 	    "--cava") st -n MusicTerm -c FloaTerm -e cava ;;
@@ -98,7 +96,6 @@ case $MY_TERM in
 	case $1 in
 	    "--terminal") kitty ;;
 	    "--floating") kitty --class=FloaTerm ;;
-	    "--checkupdates") kitty -o background_opacity=0.93 --class=Updating -e Updates --print-updates ;;
 	    "--yazi") kitty --name=YaziTerm --class=FloaTerm -e yazi ;;
 	    "--nvim") kitty -e nvim ;;
 	    "--cava") kitty --name=MusicTerm --class=FloaTerm -e cava ;;
@@ -110,7 +107,6 @@ case $MY_TERM in
 	case $1 in
 	    "--terminal") ghostty ;;
 	    "--floating") ghostty --x11-instance-name=FloaTerm --title=FloaTerm ;;
-	    "--checkupdates") ghostty --x11-instance-name=Updating --background-opacity=0.93 --title=Updating -e Updates --print-updates ;;
 	    "--yazi") ghostty --x11-instance-name=YaziTerm --title=YaziTerm -e yazi ;;
 	    "--nvim") ghostty -e nvim ;;
 	    "--cava") ghostty --x11-instance-name=MusicTerm --title=MusicTerm -e cava ;;
