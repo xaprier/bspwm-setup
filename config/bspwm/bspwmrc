@@ -87,3 +87,6 @@ run lxpolkit
 
 # Launch encrypted disk mount script
 run "${HOME}"/.local/bin/mount-veracrypt.sh
+
+# Launch block dpms when media playing script
+run "${HOME}"/.config/bspwm/bin/media-inhibit

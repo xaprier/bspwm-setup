@@ -111,7 +111,7 @@ super + alt + r
     SoftReload
 
 # Close/Kill node
-super + q
+super + {_,Shift+}q
     bspc node -{c,k}
 
 # Reload sxhkd Keybinds
