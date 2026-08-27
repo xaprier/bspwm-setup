@@ -55,8 +55,8 @@ super + v
     OpenApps --clipboard
 
 # Screenshot
-alt + s
-    OpenApps --screenshot
+alt + s 
+    flameshot gui
 
 # PowerMenu
 super + p
