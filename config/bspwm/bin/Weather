@@ -20,7 +20,7 @@
 
 # ===== Configuration =====
 KEY="8b05d62206f459e1d298cbe5844d7d87"
-CITY="Mexico City"  # Go to https://openweathermap.org/find to find your city/town
+CITY="Bayburt"  # Go to https://openweathermap.org/find to find your city/town
 UNITS="metric" # metric | imperial
 
 MAX_WAIT=10  # seconds
