@@ -1,0 +1,5 @@
+#!/bin/bash
+MOUSE_ID=$(xinput list --id-only "XCTECH Wireless-Receiver")
+MOUSE_SPEED=-0.5 # between 1.0 and -1.0
+
+xinput set-prop $MOUSE_ID "libinput Accel Speed" $MOUSE_SPEED
