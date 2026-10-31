@@ -44,7 +44,7 @@ case $NUM_MONITORS in
         mode_1="$1"
         rate_1="$2"
 
-        xrandr --output "$monitor_1" --primary --mode "$mode_1" --pos 0x0 --auto --rate "$rate_1" --scale 0.8333x0.8333
+        xrandr --output "$monitor_1" --primary --mode "$mode_1" --pos 0x0 --auto --rate "$rate_1" --scale 1x1
         bspc monitor "$monitor_1" -d 1 2 3 4 5 6
         ;;
 

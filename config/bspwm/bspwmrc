@@ -67,6 +67,8 @@ run() {
 # Update pointer settings
 "$HOME"/.config/bspwm/bin/PointerSetup
 
+# Update keyboard layout
+setxkbmap tr
 
 # Launch sxhkd daemon
 run sxhkd -c "${HOME}"/.config/bspwm/config/sxhkdrc
@@ -96,3 +98,4 @@ run "${HOME}"/.local/bin/mount-veracrypt.sh
 run "${HOME}"/.config/bspwm/bin/media-inhibit
 
 run flameshot
+run v9pro-control
